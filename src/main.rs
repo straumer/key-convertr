@@ -9,12 +9,33 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use thiserror::Error;
 use tokio::task::JoinHandle;
+use std::str::FromStr;
 
 #[derive(clap::ValueEnum, Clone, Debug, Copy)]
 enum Prefix {
     Npub,
     Nsec,
     Note,
+    Nprofile,
+    Nevent,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ParsePrefixError;
+
+impl FromStr for Prefix {
+    type Err = ParsePrefixError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "npub" => Ok(Prefix::Npub),
+            "nsec" => Ok(Prefix::Nsec),
+            "note" => Ok(Prefix::Note),
+            "nprofile" => Ok(Prefix::Nprofile),
+            "nevent" => Ok(Prefix::Nevent),
+            _ => Err(ParsePrefixError),
+        }
+    }
 }
 
 // Display 'trait' needed for enum "to_string()"
@@ -24,6 +45,8 @@ impl std::fmt::Display for Prefix {
             Prefix::Npub => write!(f, "npub"),
             Prefix::Nsec => write!(f, "nsec"),
             Prefix::Note => write!(f, "note"),
+            Prefix::Nprofile => write!(f, "nprofile"),
+            Prefix::Nevent => write!(f, "nevent"),
         }
     }
 }
@@ -45,7 +68,7 @@ struct Args {
     #[arg(
         short,
         long,
-        help = "the kind of entity (npub/nsec/note) being converted from hex to bech32-formatted string",
+        help = "the kind of entity (npub/nsec/note/nprofile/nevent) being converted from hex to bech32-formatted string",
         requires = "keys"
     )]
     kind: Option<Prefix>,
@@ -86,14 +109,19 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.to_hex {
-        // convert bech32 npub/nsec/note to hex (accepts list of bech32's)
+        // convert bech32 npub/nsec/note/nprofile/nevent to hex (accepts list of bech32's)
         for s in &args.keys {
-            let (_, data, _) = bech32::decode(s)?;
-            println!("{}", hex::encode(Vec::<u8>::from_base32(&data)?));
+            let (hrp, data, _) = bech32::decode(s)?;
+            let hrp = Prefix::from_str(hrp.as_str()).unwrap();
+            match hrp {
+                Prefix::Nevent |
+                Prefix::Nprofile => println!("{}", &hex::encode(&Vec::<u8>::from_base32(&data)?)[4..]),
+                _ => println!("{}", hex::encode(&Vec::<u8>::from_base32(&data)?)),
+            };
         }
         Ok(())
     } else if args.kind.is_some() {
-        // convert hex to bech32 npub/nsec/note (accepts list of hex)
+        // convert hex to bech32 npub/nsec/note/nprofile/nevent (accepts list of hex)
         let hrp = args.kind.unwrap();
         for key in &args.keys {
             let encoded = bech32_encode(hrp, key).unwrap();
@@ -159,9 +187,13 @@ enum KeyValidationError {
 }
 /// Converts a hex encoded string to bech32 format for given a Prefix (hrp)
 fn bech32_encode(hrp: Prefix, hex_key: &String) -> Result<String, KeyValidationError> {
+    let hex_str = match hrp {
+        Prefix::Nevent | Prefix::Nprofile => format!("0020{hex_key}"),
+        _ => format!("{hex_key}"),
+    };
     bech32::encode(
         &hrp.to_string(),
-        hex::decode(hex_key)
+        hex::decode(&hex_str)
             .map_err(|_| InvalidKeyDecode(hex_key.to_string()))?
             .to_base32(),
         Variant::Bech32,

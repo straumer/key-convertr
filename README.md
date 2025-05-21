@@ -5,8 +5,8 @@ This is kind of bonkers, so here's a command-line utility that you can run to co
 
 ## Features:
 >Note: "keys" + "nip5" arguments accept multiple inputs for bulk operations
-- convert from bech32 (npub/nsec/note) to hex
-- convert from hex to bech32 (npub/nsec/note)
+- convert from bech32 (npub/nsec/note/nprofile/nevent) to hex
+- convert from hex to bech32 (npub/nsec/note/nprofile/nevent)
 - supports NIP-05 domain identifiers:
     - calls given nip5 domain to get nostr.json containing user pubkeys (located at domain.com/.well-known/nostr.json)
     - extracts and converts all pubkeys from hex to bech32 format
@@ -44,15 +44,17 @@ Just provide the hex-encoded key or note-id and a `--kind` argument. The `kind`s
 - npub
 - nsec
 - note
+- nprofile
+- nevent
 
-To convert from an `bech32(npub/nsec/note) to hex-encoding`, you can do
+To convert from an `bech32(npub/nsec/note/nprofile/nevent) to hex-encoding`, you can do
 
 ```shell
 $> key-convertr --to-hex npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6
 3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d
 ```
 
-To convert from an `hex-encoding to bech32 (npub/nsec/note)`, you can do
+To convert from an `hex-encoding to bech32 (npub/nsec/note/nprofile/nevent)`, you can do
 
 ```shell
 $> key-convertr --kind npub 3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d
